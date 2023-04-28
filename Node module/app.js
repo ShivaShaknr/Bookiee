@@ -1,0 +1,123 @@
+const express = require("express");
+const app=express();
+const mongoose=require("mongoose");
+app.use(express.json())
+const cors = require("cors");
+app.use(cors());
+const bcrypt = require("bcryptjs");
+app.set("view engine", "ejs");
+const jwt = require("jsonwebtoken");
+// var nodemailer = require("nodemailer");
+
+const JWT_SECRET =
+  "hvdvay6ert72839289()aiyg8t87qt72393293883uhefiuh78ttq3ifi78272jbkj?[]]pou89ywe";
+const mongourl="mongodb+srv://rovind:rovind1409@cluster0.tnxfp3u.mongodb.net/?retryWrites=true&w=majority"
+
+mongoose.connect(mongourl, {
+    useNewUrlParser:true
+})
+.then(()=>{
+    console.log("Connected to database");
+
+})
+.catch((e)=>console.log(e));
+require("./userDetails");
+
+//register
+const User = mongoose.model("UserInfo");
+app.post("/register", async (req, res) => {
+  const { fname, lname, email, password } = req.body;
+
+  const encryptedPassword = await bcrypt.hash(password, 10);
+  try {
+    const oldUser = await User.findOne({ email });
+
+    if (oldUser) {
+      return res.json({ error: "User Exists" });
+    }
+    await User.create({
+      fname,
+      lname,
+      email,
+      password: encryptedPassword,
+    });
+    res.send({ status: "ok" });
+  } catch (error) {
+    res.send({ status: "error" });
+  }
+});
+
+
+//login
+app.post("/login-user", async (req, res) => {
+  const { email, password } = req.body;
+  const user = await User.findOne({ email });
+  //console.log(user.fname);
+  if (!user) {
+    return res.json({ error: "User Not found" });
+  }
+  if (await bcrypt.compare(password, user.password)) {
+    const token = jwt.sign({},JWT_SECRET);
+    if (res.status(201)) {
+      return res.json({ status: "ok", data: token });
+    } else {
+      return res.json({ error: "error" });
+    }
+    }
+    res.json({ status: "error", error: "Invalid Password" }); 
+});
+
+//name
+app.post("/name", async (req, res) => {
+  const {email} = req.body;
+  const user = await User.findOne({ email });
+  //console.log(user);
+  const uname=user.fname;
+  const pname=user.lname; 
+  const userName=uname+" "+pname;
+  if(userName.length>=1){
+  return res.json({status:"ok",data:userName})
+  }else{
+  return res.json({ error: "error" });
+  }
+  
+});
+
+
+
+
+//cart
+app.post('/addToCart',async (req,res)=>{
+  const user = await User.findOne({email:req.body.email})
+  user.cart = [];
+  for(var i=0;i<req.body.data.length;i++)
+{
+  user.cart.push(req.body.data[i]);
+}  
+user.save()
+//console.log(user);
+  res.json({status:"ok"})
+})
+
+//payment
+
+app.post('/paymentdetais',async (req,res)=>{
+  const user = await User.findOne({email:req.body.email})
+  user.pay = [];
+  for(var i=0;i<req.body.pay.length;i++)
+{
+  user.pay.push(req.body.pay[i]);
+}  
+user.save()
+//console.log(user);
+  res.json({status:"ok"})
+})
+
+
+
+
+
+
+app.listen(5000, ()=>{
+    console.log("Server connected");
+});
